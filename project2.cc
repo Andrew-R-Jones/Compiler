@@ -1297,7 +1297,7 @@ int main(int argc, char* argv[])
 	   and the first argument to your program is stored in argv[1]
 	 */
 
-	//task = atoi(argv[1]);
+	task = atoi(argv[1]);
 	//Token t1 = lexer.GetToken();
 	//START_SYMBOL = t1.lexeme;
 	//lexer.UngetToken(t1);
@@ -1310,10 +1310,10 @@ int main(int argc, char* argv[])
 
 	//printf("\nenter a task: ");
 
-	while (task != 0)
-	{
+	//while (task != 0)
+	//{
 
-		scanf_s("%d", &task); ///// added for testing
+		//scanf_s("%d", &task); ///// added for testing
 
 		switch (task) {
 		case 1: printTerminalsAndNonTerminals();
@@ -1359,6 +1359,6 @@ int main(int argc, char* argv[])
 
 		///printf("\nenter a task: ");
 		//scanf_s("%d", &task); ///// added for testing
-	}
+	//}
 	return 0;
 }
