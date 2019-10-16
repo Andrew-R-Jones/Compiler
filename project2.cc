@@ -412,7 +412,7 @@ void print_useful_only()
 			if (reachable_map[term] && generating_map[term])
 			{
 
-				full_rule += term + " -> ";
+				full_rule += term + " ->";
 
 
 				//it is now a pointer to a vector<int>
@@ -854,6 +854,7 @@ void print_first_sets()
 	string term;
 	string symbol;
 	vector<string> v;
+	set<string> added;
 	int count = 0;
 
 
@@ -866,21 +867,31 @@ void print_first_sets()
 	{
 		term = ordered_non_terminals[i];
 
+		if (first_set_map[term].count("#")) 
+		{
+			added.insert("#");
+			v.push_back("#");
+		}
+
 		result = "FIRST(" + term + ") = {";
-		//for (auto i = terminals.begin(); i != terminals.end(); i++)
-		//{
-			//symbol = *i;
+		for (auto i = terminals.begin(); i != terminals.end(); i++)
+		{
+
+
+			symbol = *i;
 
 			for (set<string> ::iterator it = first_set_map.at(term).begin(); it != first_set_map.at(term).end(); ++it)
 			{
-				//if (symbol == *it)
-				//{
+							
+				if (symbol == *it && !added.count(symbol))
+				{
+					added.insert(symbol);
 					v.push_back(*it);
-					//print = true;
-					//break;
-				//}
+					print = true;
+					break;
+				}
 			}
-		//}
+		}
 
 
 		if (v.size() == 0) 
@@ -909,6 +920,7 @@ void print_first_sets()
 		print = false;
 		count = 0;
 		v.erase(v.begin(), v.end());
+		added.clear();
 		cout << endl;
 	}
 }
@@ -949,7 +961,7 @@ void print_follow_sets()
 
 			if (v.size() == 0) 
 			{
-				cout << " }";
+				cout << "  }";
 
 			}
 			else
@@ -987,7 +999,7 @@ bool add_follow_set_by_iteration()
 	string symbol;
 	string next_symbol;
 	int initialSize = 0, newSize = 0;
-	bool is_in, last_symbol = false;
+	bool is_in, second_to_last = false , last_symbol = false;
 	vector<string>::iterator temp_rule;
 	int rule_size = 0;
 	int count = 0;
@@ -1006,13 +1018,19 @@ bool add_follow_set_by_iteration()
 			// for all rules of each non term
 			for (vector<string>::iterator rule = NON_TERM_RULES->begin(); rule != NON_TERM_RULES->end(); ++rule)
 			{
+				
+
 				count++;
 
 				if (count == rule_size)
 				{
 					last_symbol = true;
 				}
-				else
+				else if (count == rule_size - 1)
+				{
+					second_to_last = true;
+				}
+				if (!last_symbol)
 				{
 					temp_rule = rule;
 					next_symbol = *(++temp_rule);
@@ -1021,49 +1039,27 @@ bool add_follow_set_by_iteration()
 				// rule 2
 				// A -> a B b
 
-				if (non_term_map[*rule] && (non_term_map[next_symbol] || term_map[next_symbol]) && !last_symbol)
+				if (non_term_map[*rule] && (non_term_map[next_symbol] || term_map[next_symbol]) && !last_symbol) //&& !last_symbol
 				{
 
 					initialSize = follow_set_map[*rule].size(); // follow(rule)
 
 					// union the follow(rule) set with first(nextsymbol) set 
-					auto pos = follow_set_map[*rule].begin(); // follow(rule)
+					//auto pos = follow_set_map[*rule].begin(); // follow(rule)
+					
 					for (auto it = first_set_map[next_symbol].begin(); it != first_set_map[next_symbol].end(); ++it) { // first(next symbol)
 						if (*it != "#")
-							pos = follow_set_map[*rule].insert(pos, *it); // follow(rule)
+							follow_set_map[*rule].insert(*it); // follow(rule)
 						if (*it == "#")
 							contains_epsilon = true;
 					}
 
 
+					// rule 4 a -> a B b	and b contains contains epsilon
 
-					newSize = follow_set_map[*rule].size();
-				}
-
-				// rule 3
-				// A -> aB     follow(B) U follow(A)
-				else if (non_term_map[*rule] && last_symbol)
-				{
-					initialSize = follow_set_map[*rule].size(); // follow(rule)
-
-					// union the follow(rule) set with follow(nextsymbol) set 
-					auto pos = follow_set_map[*rule].begin(); // follow(rule)
-					for (auto it = follow_set_map[nonterm].begin(); it != follow_set_map[nonterm].end(); ++it) { // follow(nonterm)
-						if (*it != "#")
-							pos = follow_set_map[*rule].insert(pos, *it); // follow(rule)
-						if (*it == "#")
-							contains_epsilon = true;
-					}
-
-					newSize = follow_set_map[*rule].size();
-				}
-
-				// rule 4
-				// A -> aBb
-				else if (non_term_map[*rule] && non_term_map[next_symbol] && !last_symbol)
-				{
+					// checks for rule 4
 					// does it contain epsilon?
-					if (first_set_map[next_symbol].count("#")) {
+					if (non_term_map[next_symbol] && first_set_map[next_symbol].count("#") && second_to_last) {
 						// epsilon is in the set, count is 1
 						contains_epsilon = true;
 					}
@@ -1072,35 +1068,83 @@ bool add_follow_set_by_iteration()
 						contains_epsilon = false;
 					}
 
-					if (contains_epsilon)
+
+					if (contains_epsilon )
 					{
-						initialSize = follow_set_map[*rule].size(); // follow(rule)
+						//initialSize = follow_set_map[*rule].size(); // follow(rule)
 						// union the follow(rule) set with follow(nonterm) set 
-						auto pos = follow_set_map[*rule].begin(); // follow(rule)
+						//auto pos = follow_set_map[*rule].begin(); // follow(rule)
 						for (auto it = follow_set_map[nonterm].begin(); it != follow_set_map[nonterm].end(); ++it) { // follow(nonterm)
 							if (*it != "#")
-								pos = follow_set_map[*rule].insert(pos, *it); // follow(rule)
+								follow_set_map[*rule].insert(*it); // follow(rule)
 							if (*it == "#")
 								change_made = true;
 						}
 
-						newSize = follow_set_map[*rule].size();
 					}
-					else
-					{
-						initialSize = follow_set_map[*rule].size(); // follow(rule)
-						// union the follow(rule) set with follow(nonterm) set 
-						auto pos = follow_set_map[*rule].begin(); // follow(rule)
-						for (auto it = first_set_map[next_symbol].begin(); it != first_set_map[next_symbol].end(); ++it) { // follow(nonterm)
-							if (*it != "#")
-								pos = follow_set_map[*rule].insert(pos, *it); // follow(rule)
-							if (*it == "#")
-								change_made = true;
-						}
 
-						newSize = follow_set_map[*rule].size();
-					}
+
+					newSize = follow_set_map[*rule].size();
+
+
 				}
+				// rule 3
+				// A -> aB     follow(B) U follow(A)
+				else if (non_term_map[*rule] && last_symbol)
+				{
+					initialSize = follow_set_map[*rule].size(); // follow(rule)
+
+					// union the follow(rule) set with follow(nextsymbol) set 
+					//auto pos = follow_set_map[*rule].begin(); // follow(rule)
+					for (auto it = follow_set_map[nonterm].begin(); it != follow_set_map[nonterm].end(); ++it) { // follow(nonterm)
+						if (*it != "#")
+							follow_set_map[*rule].insert(*it); // follow(rule)
+						if (*it == "#")
+							contains_epsilon = true;
+					}
+
+					newSize = follow_set_map[*rule].size();
+				}
+				// rule 4
+				else if (non_term_map[*rule] && (non_term_map[next_symbol] || term_map[next_symbol]))
+				{
+
+					initialSize = follow_set_map[*rule].size(); // follow(rule)
+
+					// rule 4 a -> a B b	and b contains contains epsilon
+
+					// does it contain epsilon?
+					if (non_term_map[next_symbol] && first_set_map[next_symbol].count("#") && second_to_last) {
+						// epsilon is in the set, count is 1
+						contains_epsilon = true;
+					}
+					else {
+						// count zero, i.e. epsilon not in the set
+						contains_epsilon = false;
+					}
+
+
+					if (contains_epsilon)
+					{
+						//initialSize = follow_set_map[*rule].size(); // follow(rule)
+						// union the follow(rule) set with follow(nonterm) set 
+						//auto pos = follow_set_map[*rule].begin(); // follow(rule)
+						for (auto it = follow_set_map[nonterm].begin(); it != follow_set_map[nonterm].end(); ++it) { // follow(nonterm)
+							if (*it != "#")
+								follow_set_map[*rule].insert(*it); // follow(rule)
+							if (*it == "#")
+								change_made = true;
+						}
+
+					}
+
+
+					newSize = follow_set_map[*rule].size();
+
+
+				}
+
+
 
 				// if the size of the set changed 
 				//  change made = true
@@ -1112,6 +1156,7 @@ bool add_follow_set_by_iteration()
 			rule_size = 0;
 			count = 0;
 			last_symbol = false;
+			second_to_last = false;
 			vector<string>::iterator temp_rule;
 
 		}
@@ -1303,7 +1348,7 @@ void CheckIfGrammarHasPredictiveParser()
 
 int main(int argc, char* argv[])
 {
-	
+	int task = 9;
 
 	/*
 	commented out to manually add input for testing
@@ -1319,7 +1364,7 @@ int main(int argc, char* argv[])
 	   and the first argument to your program is stored in argv[1]
 	 */
 
-	int task = atoi(argv[1]);
+	//task = atoi(argv[1]);
 	//Token t1 = lexer.GetToken();
 	//START_SYMBOL = t1.lexeme;
 	//lexer.UngetToken(t1);
@@ -1332,10 +1377,12 @@ int main(int argc, char* argv[])
 
 	//printf("\nenter a task: ");
 
-	//while (task != 0)
-	//{
-		//int task = 9;
-		//scanf_s("%d", &task); ///// added for testing
+	
+	while (task != 0)
+	{
+
+		scanf_s("%d", &task); ///// added for testing
+
 		switch (task) {
 		case 1: printTerminalsAndNonTerminals();
 			break;
@@ -1380,6 +1427,6 @@ int main(int argc, char* argv[])
 
 		///printf("\nenter a task: ");
 		//scanf_s("%d", &task); ///// added for testing
-	//}
+	}
 	return 0;
 }
