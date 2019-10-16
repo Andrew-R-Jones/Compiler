@@ -37,7 +37,7 @@ void print_generating_data();
 void set_terminals_to_true();
 void set_epsilons_to_true();
 bool iterate_through_rules();
-void determine_reachable_symbols();
+bool determine_reachable_symbols();
 bool contains_non_generating(vector<vector<string> >::iterator it, vector<string>::iterator jt);
 bool set_rule_as_useless(vector<vector<string> >::iterator it, vector<string>::iterator jt);
 bool contains_unreachable(vector<vector<string> >::iterator it, vector<string>::iterator jt);
@@ -455,7 +455,7 @@ void print_useful_only()
 
 bool contains_non_generating(vector<vector<string> >::iterator it, vector<string>::iterator jt)
 {
-	bool found = false, flag = false;
+	bool useless = false, flag = false;
 	string str;
 
 	// iterates the symbols in the rule, set the symbol to unreachable if non generating
@@ -465,13 +465,28 @@ bool contains_non_generating(vector<vector<string> >::iterator it, vector<string
 		//if (non_term_map.count(str) == 1)
 			//found = true;
 
-		// set the reach map to true, if reach from the lhs rule
-		if (generating_map[*jt] && non_term_map.count(*jt))
+
+		if (useless) 
 		{
-
-			reachable_map[*jt] = true;
+			reachable_map[*jt] = false;
 		}
+		else
+		{
+			// set the reach map to true, if reach from the lhs rule
+			if (generating_map[*jt] && non_term_map.count(*jt))
+			{
 
+				if (!reachable_map[*jt])
+				{
+					reachable_map[*jt] = true;
+					flag = true;
+				}
+			}
+			else if (!generating_map[*jt] && non_term_map.count(*jt))
+			{
+				useless = true;
+			}
+		}
 	}
 	//if (flag)
 		//set_rule_as_useless(it, jt);
@@ -650,7 +665,7 @@ bool iterate_through_rules()
 	return change_made;
 }
 
-void determine_reachable_symbols()
+bool determine_reachable_symbols()
 {
 	// start from start symbol
 	// in S -> aBc						S is the start symbol
@@ -665,29 +680,32 @@ void determine_reachable_symbols()
 	bool non_term_present = false;
 	bool correct_format = false;
 	bool epsilon = false;
+	bool change = false;
 
 	string term;
 
 	reachable_map[START_SYMBOL] = true;
 
-	term = START_SYMBOL;
-	//for (auto i = ordered_non_terminals.begin(); i != ordered_non_terminals.end(); i++)
-	//{
-		term = START_SYMBOL;
+	//term = START_SYMBOL;
+	for (auto i = ordered_non_terminals.begin(); i != ordered_non_terminals.end(); i++)
+	{
+		term = *i;
 
+		if(reachable_map[*i] && generating_map[*i])
 		for (vector<vector<string> >::iterator lhs_rule_set = rule_list.at(term).begin(); lhs_rule_set != rule_list.at(term).end(); ++lhs_rule_set)
 		{
 			//cout << term << " -> ";
-			for (vector<string>::iterator rhs_rule = lhs_rule_set->begin(); rhs_rule != lhs_rule_set->end(); ++rhs_rule)
-			{
-				contains_non_generating(lhs_rule_set, rhs_rule);
+			//for (vector<string>::iterator rhs_rule = lhs_rule_set->begin(); rhs_rule != lhs_rule_set->end(); ++rhs_rule)
+			//{
+				if(contains_non_generating(lhs_rule_set, lhs_rule_set->begin()))
+					change = true;
 
 				//cout << "set rule " << *jt << " to useless" << endl;
 				//if (*rhs_rule != START_SYMBOL)
 					//reachable_map[*rhs_rule] = false;
 
 
-			}
+			//}
 
 			term_present = false;
 			non_term_present = false;
@@ -696,13 +714,14 @@ void determine_reachable_symbols()
 
 		}
 
-	//}
+	}
 
 
 
 
 
 	reachable_map[START_SYMBOL] = true;
+	return change;
 }
 
 
@@ -736,7 +755,7 @@ void RemoveUselessSymbols()
 	//print_generating_data(); // for testing
 
 	// step 5 iterate through only generating symbols and eliminate non reachable symbols
-	determine_reachable_symbols();
+	while (determine_reachable_symbols());
 
 
 }
@@ -921,15 +940,19 @@ void print_follow_sets()
 			if (follow_set_map[term].count(symbol)) {
 				{
 					v.push_back(symbol);
-					print = true;
 					//break;
 				}
 			}
 		}
 
-		if (print)
-		{
 			cout << result;
+
+			if (v.size() == 0) 
+			{
+				cout << " }";
+
+			}
+			else
 			for (vector<string>::iterator it = v.begin(); it != v.end(); it++)
 			{
 				cout << " " << *it;
@@ -946,10 +969,9 @@ void print_follow_sets()
 				count++;
 			}
 
-			print = false;
 			count = 0;
 			v.erase(v.begin(), v.end());
-		}
+		
 		cout << endl;
 	}
 }
@@ -1281,7 +1303,7 @@ void CheckIfGrammarHasPredictiveParser()
 
 int main(int argc, char* argv[])
 {
-	int task = 9;
+	
 
 	/*
 	commented out to manually add input for testing
@@ -1297,7 +1319,7 @@ int main(int argc, char* argv[])
 	   and the first argument to your program is stored in argv[1]
 	 */
 
-	task = atoi(argv[1]);
+	int task = atoi(argv[1]);
 	//Token t1 = lexer.GetToken();
 	//START_SYMBOL = t1.lexeme;
 	//lexer.UngetToken(t1);
@@ -1312,9 +1334,8 @@ int main(int argc, char* argv[])
 
 	//while (task != 0)
 	//{
-
+		//int task = 9;
 		//scanf_s("%d", &task); ///// added for testing
-
 		switch (task) {
 		case 1: printTerminalsAndNonTerminals();
 			break;
